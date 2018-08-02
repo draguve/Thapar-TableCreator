@@ -1,5 +1,7 @@
 from openpyxl import load_workbook
 from openpyxl.utils import column_index_from_string
+from openpyxl.styles.borders import Border, Side
+
 
 # def find_all_classes(ws):
 #     find_column = False
@@ -38,3 +40,29 @@ def get_timetable(ws,start_cell):
     for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*11),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
         for cell in row:
             print(cell.value)
+
+def get_period(cell):
+    #to find the code
+    class_code = cell.value
+    cell_under=cell.offset(1,0)
+    class_cell = cell
+    if(class_code == None and cell_under.border.left.style == None):
+        offset = -1
+        while(class_code==None):
+            class_cell = cell.offset(0,offset)
+            class_code = class_cell.value
+            offset-=1
+    print(class_code)
+
+    #find cells to skip
+    to_skip = 0
+    current_cell = class_cell
+    while(current_cell.border.bottom.style==None):
+        current_cell = current_cell.offset(1,0)
+        to_skip+=1
+
+    #find class room
+    class_room = class_cell.offset(1,0).value
+    print(class_room)
+
+    return to_skip
