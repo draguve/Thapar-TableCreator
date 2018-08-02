@@ -8,7 +8,7 @@ from copy import copy
 import colorsys
 
 
-def find_all_classes(ws):
+def find_all_batches(ws):
     class_row = None
     for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
         for cell in row:
@@ -19,11 +19,12 @@ def find_all_classes(ws):
     classes = []
     for column in ws.iter_cols(min_row=class_row ,max_col=100,max_row=class_row):
         for cell in column:
-            if(cell.value!=None and (cell.value.lower()!="day" or cell.value.lower() != "hour")):
-                classes.append(cell.value)
+            if(cell.value!=None):
+                if(cell.value.lower() !="day" and cell.value.lower() != "hours"):
+                    classes.append(cell.value)
     return classes
 
-def find_class(ws,class_code):
+def find_batch(ws,class_code):
     class_row = None
     for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
         for cell in row:
@@ -38,7 +39,6 @@ def find_class(ws,class_code):
     return None
 
 def get_timetable(ws,name_cell):
-    
     finalworkbook,finalsheet = create_empty_table()
     finalsheet.title = name_cell.value
 
@@ -81,7 +81,6 @@ def get_timetable(ws,name_cell):
         start_cell = end_cell.offset(1,0)
         daycell = daycell.offset(0,1)
         current_cell = daycell
-
     return finalworkbook
 
 def get_period(cell):
@@ -177,3 +176,34 @@ def style_range(ws, cell_range, border=Border(), fill=None, font=None, alignment
         if fill:
             for c in row:
                 c.fill = fill
+
+def ask_question(question,choices):
+    while True:
+        print(question)
+        for x in range(1,len(choices)+1):
+            print("{0}) - {1}".format(x,choices[x-1]))
+        response = input(">")
+        try:
+            if int(response)<len(choices)+1:
+                return int(response)-1
+        except ValueError:
+            print("Please enter a valid choice")
+
+if __name__ == "__main__":
+    #Load xlsx file
+    while True:
+        try:
+            print("Please input filename for the timetable")
+            response = input(">")
+            wb = load_workbook(response)
+            break
+        except FileNotFoundError:
+            print("please check the filename provided")
+    
+    sheet = ask_question("Please select a sheet for your year",wb.sheetnames)
+    worksheet = wb[wb.sheetnames[sheet]]
+    batches = find_all_batches(worksheet)
+    batch = ask_question("Please select your batch",batches)
+    batch_cell = find_batch(worksheet,batches[batch])
+    finalworkbook = get_timetable(worksheet,batch_cell)
+    finalworkbook.save("{0}.xlsx".format(batches[batch]))
