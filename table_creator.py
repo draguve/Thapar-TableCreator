@@ -1,4 +1,5 @@
 from openpyxl import load_workbook
+from openpyxl.utils import column_index_from_string
 
 # def find_all_classes(ws):
 #     find_column = False
@@ -32,3 +33,8 @@ def find_class(ws,class_code):
             if(cell.value!=None and cell.value.lower() == class_code.lower()):
                 return cell
     return None
+
+def get_timetable(ws,start_cell):
+    for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*11),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
+        for cell in row:
+            print(cell.value)
