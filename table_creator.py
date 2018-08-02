@@ -2,8 +2,10 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles.borders import Border, Side
+from openpyxl.styles import PatternFill
 from openpyxl.compat import range as pyxlrange
 from copy import copy
+import colorsys
 
 
 def find_all_classes(ws):
@@ -66,7 +68,7 @@ def get_timetable(ws,name_cell):
                             to_write.offset(3,0).value = teacher_code
                             #style
                             style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column,to_write.row,to_write.offset(3,0).column,to_write.offset(3,0).row), border=border)
-                        else:
+                        else:   
                             to_write.offset(1,0).value = "%s | %s"%(class_room,teacher_code)
                             #style
                             style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column,to_write.row,to_write.offset(1,0).column,to_write.offset(1,0).row), border=border)
@@ -138,20 +140,16 @@ def create_empty_table():
         current_cell.offset(1,0).value = str((time+1)%12)
         current_cell = current_cell.offset(2,0)
         time+=1
-        
+
+    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+    current_cell = finalsheet["B1"]
+    for x in range(5):
+        current_cell.value = days[x]
+        current_cell = current_cell.offset(0,1)
+
     return wb,finalsheet
 
 def style_range(ws, cell_range, border=Border(), fill=None, font=None, alignment=None):
-    """
-    Apply styles to a range of cells as if they were a single cell.
-
-    :param ws:  Excel worksheet instance
-    :param range: An excel range to style (e.g. A1:F20)
-    :param border: An openpyxl Border
-    :param fill: An openpyxl PatternFill or GradientFill
-    :param font: An openpyxl Font object
-    """
-
     top = Border(top=border.top)
     left = Border(left=border.left)
     right = Border(right=border.right)
