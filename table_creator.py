@@ -1,6 +1,9 @@
 from openpyxl import load_workbook
+from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles.borders import Border, Side
+from openpyxl.compat import range as pyxlrange
+
 
 
 # def find_all_classes(ws):
@@ -37,12 +40,16 @@ def find_class(ws,class_code):
     return None
 
 def get_timetable(ws,name_cell):
+    
+
+
     to_skip = 0
     start_cell = name_cell.offset(1,0)
     for x in range(5):
         for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*10),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
             for cell in row:
                 if(to_skip<=0):
+                    #get the period data at the right location
                     class_code,class_room,teacher_code,to_skip = get_period(cell)
                     print(class_code)
                 else:
@@ -50,6 +57,22 @@ def get_timetable(ws,name_cell):
                 end_cell = cell
         print("END OF DAY")
         start_cell = end_cell.offset(1,0)
+
+def create_empty_table():
+    #creating a new workbook to store the new timetable
+    wb = Workbook()
+    finalsheet = wb.active
+
+    #formatting the table
+    current_cell = finalsheet["A2"]
+    time = 8
+    for x in range(1,11):
+        current_cell.value = str(time%12) + " To"
+        current_cell.offset(1,0).value = str((time+1)%12) + " "
+        current_cell = current_cell.offset(2,0)
+        time+=1
+
+    return wb,finalsheet    
 
 def get_period(cell):
     #to find the code
