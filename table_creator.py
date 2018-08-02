@@ -37,9 +37,14 @@ def find_class(ws,class_code):
     return None
 
 def get_timetable(ws,start_cell):
-    for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*11),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
+    to_skip = 0
+    for row in ws.iter_rows(min_row=start_cell.row+1,max_row=(int(start_cell.row)+2*11),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
         for cell in row:
-            print(cell.value)
+            if(to_skip<=0):
+                class_code,class_room,teacher_code,to_skip = get_period(cell)
+                print(class_code)
+            else:
+                to_skip-=1
 
 def get_period(cell):
     #to find the code
@@ -50,7 +55,6 @@ def get_period(cell):
         while(class_code==None and class_cell.border.left.style != "medium"):
             class_cell = class_cell.offset(0,-1)
             class_code = class_cell.value
-    print(class_code)
 
     #find cells to skip
     to_skip = 0
@@ -63,7 +67,6 @@ def get_period(cell):
 
     #find class room
     class_room = class_cell.offset(1,0).value
-    print(class_room)
 
     #find teacher code 
     if(to_skip==3):
@@ -75,6 +78,5 @@ def get_period(cell):
         teacher_code = teacher_cell.value
     else:
         teacher_code = None
-    print(teacher_code)
 
-    return to_skip
+    return class_code,class_room,teacher_code,to_skip
