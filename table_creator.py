@@ -3,6 +3,7 @@ from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles.borders import Border, Side
 from openpyxl.compat import range as pyxlrange
+from copy import copy
 
 
 def find_all_classes(ws):
@@ -45,6 +46,9 @@ def get_timetable(ws,name_cell):
     daycell = finalsheet["B2"]
     current_cell = daycell
 
+    thin = Side(border_style="thin", color="000000")
+    border = Border(top=thin, left=thin, right=thin, bottom=thin)
+
     for x in range(5):
         for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*11-1),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
             for cell in row:
@@ -60,8 +64,12 @@ def get_timetable(ws,name_cell):
                             to_write.offset(1,0).value = class_room
                             to_write.offset(2,0).value = "LAB"
                             to_write.offset(3,0).value = teacher_code
+                            #style
+                            style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column,to_write.row,to_write.offset(3,0).column,to_write.offset(3,0).row), border=border)
                         else:
                             to_write.offset(1,0).value = "%s | %s"%(class_room,teacher_code)
+                            #style
+                            style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column,to_write.row,to_write.offset(1,0).column,to_write.offset(1,0).row), border=border)
                     current_cell = current_cell.offset(to_skip+1,0) 
                 else:
                     to_skip-=1
@@ -125,35 +133,49 @@ def create_empty_table():
 
     current_cell = finalsheet["A2"]
     time = 8
-    for x in range(1,11):
+    for x in range(1,12):
         current_cell.value = str(time%12) + " To"
         current_cell.offset(1,0).value = str((time+1)%12)
         current_cell = current_cell.offset(2,0)
         time+=1
+        
+    return wb,finalsheet
 
-    
-    #removing borders
-    empty_border = Border(left=Side(border_style=None,
-                           color='FF000000'),
-                 right=Side(border_style=None,
-                            color='FF000000'),
-                 top=Side(border_style=None,
-                          color='FF000000'),
-                 bottom=Side(border_style=None,
-                             color='FF000000'),
-                 diagonal=Side(border_style=None,
-                               color='FF000000'),
-                 diagonal_direction=0,
-                 outline=Side(border_style=None,
-                              color='FF000000'),
-                 vertical=Side(border_style=None,
-                               color='FF000000'),
-                 horizontal=Side(border_style=None,
-                                color='FF000000')
-                )
+def style_range(ws, cell_range, border=Border(), fill=None, font=None, alignment=None):
+    """
+    Apply styles to a range of cells as if they were a single cell.
 
-    for x in range(1,12):
-        for y in range(1,12):
-            finalsheet.cell(row=x,column=y).border = empty_border
+    :param ws:  Excel worksheet instance
+    :param range: An excel range to style (e.g. A1:F20)
+    :param border: An openpyxl Border
+    :param fill: An openpyxl PatternFill or GradientFill
+    :param font: An openpyxl Font object
+    """
 
-    return wb,finalsheet   
+    top = Border(top=border.top)
+    left = Border(left=border.left)
+    right = Border(right=border.right)
+    bottom = Border(bottom=border.bottom)
+
+    first_cell = ws[cell_range.split(":")[0]]
+    if alignment:
+        ws.merge_cells(cell_range)
+        first_cell.alignment = alignment
+
+    rows = ws[cell_range]
+    if font:
+        first_cell.font = font
+
+    for cell in rows[0]:
+        cell.border = cell.border + top
+    for cell in rows[-1]:
+        cell.border = cell.border + bottom
+
+    for row in rows:
+        l = row[0]
+        r = row[-1]
+        l.border = l.border + left
+        r.border = r.border + right
+        if fill:
+            for c in row:
+                c.fill = fill
