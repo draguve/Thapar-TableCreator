@@ -41,10 +41,14 @@ def find_class(ws,class_code):
 
 def get_timetable(ws,name_cell):
     
-
+    finalworkbook,finalsheet = create_empty_table()
+    finalsheet.title = name_cell.value
 
     to_skip = 0
     start_cell = name_cell.offset(1,0)
+
+    daycell = finalsheet["B2"]
+
     for x in range(5):
         for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*10),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
             for cell in row:
@@ -52,11 +56,22 @@ def get_timetable(ws,name_cell):
                     #get the period data at the right location
                     class_code,class_room,teacher_code,to_skip = get_period(cell)
                     print(class_code)
+                    if(class_code!=None and class_room!=None and teacher_code!=None):
+                        to_write = daycell.offset(cell.row - start_cell.row,0)
+                        to_write.value = class_code
+                        if to_skip == 3:
+                            to_write.offset(1,0).value = class_room
+                            to_write.offset(2,0).value = teacher_code
+                        else:
+                            to_write.offset(1,0).value = "%s | %s"%(class_room,teacher_code)        
                 else:
                     to_skip-=1
                 end_cell = cell
-        print("END OF DAY")
+        #End of day
         start_cell = end_cell.offset(1,0)
+        daycell = daycell.offset(0,1)
+
+    return finalworkbook
 
 def create_empty_table():
     #creating a new workbook to store the new timetable
@@ -64,11 +79,13 @@ def create_empty_table():
     finalsheet = wb.active
 
     #formatting the table
+    finalsheet["A2"].value = "Time/Day"
+
     current_cell = finalsheet["A2"]
     time = 8
     for x in range(1,11):
         current_cell.value = str(time%12) + " To"
-        current_cell.offset(1,0).value = str((time+1)%12) + " "
+        current_cell.offset(1,0).value = str((time+1)%12)
         current_cell = current_cell.offset(2,0)
         time+=1
 
