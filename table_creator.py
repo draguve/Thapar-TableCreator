@@ -47,11 +47,9 @@ def get_period(cell):
     cell_under=cell.offset(1,0)
     class_cell = cell
     if(class_code == None and cell_under.border.left.style == None):
-        offset = -1
-        while(class_code==None):
-            class_cell = cell.offset(0,offset)
+        while(class_code==None and class_cell.border.left.style != "medium"):
+            class_cell = class_cell.offset(0,-1)
             class_code = class_cell.value
-            offset-=1
     print(class_code)
 
     #find cells to skip
@@ -60,9 +58,23 @@ def get_period(cell):
     while(current_cell.border.bottom.style==None):
         current_cell = current_cell.offset(1,0)
         to_skip+=1
+    if to_skip>3:
+        to_skip=3
 
     #find class room
     class_room = class_cell.offset(1,0).value
     print(class_room)
+
+    #find teacher code 
+    if(to_skip==3):
+        teacher_code = class_cell.offset(3,0).value
+    elif(class_code!=None):
+        teacher_cell = class_cell.offset(1,1)
+        while(teacher_cell.value==None):
+            teacher_cell = teacher_cell.offset(0,1)
+        teacher_code = teacher_cell.value
+    else:
+        teacher_code = None
+    print(teacher_code)
 
     return to_skip
