@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb 13 17:51:54 2019
+
+@author: Draguve
+         Rishi
+         Sarthak
+
+"""
+
 from openpyxl import load_workbook
 from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
@@ -13,10 +23,11 @@ def find_all_batches(ws):
     for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
         for cell in row:
             if(cell.value != None and cell.value.lower() == "day"):
-                class_row = cell.row
+                class_row = cell.row+1
     if class_row is None:
         return None
     classes = []
+    print(class_row)
     for column in ws.iter_cols(min_row=class_row ,max_col=100,max_row=class_row):
         for cell in column:
             if(cell.value!=None):
@@ -29,7 +40,7 @@ def find_batch(ws,class_code):
     for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
         for cell in row:
             if(cell.value != None and cell.value.lower() == "day"):
-                class_row = cell.row
+                class_row = cell.row+1
     if class_row is None:
         return None
     for column in ws.iter_cols(min_row=class_row ,max_col=100,max_row=class_row):
@@ -52,7 +63,8 @@ def get_timetable(ws,name_cell):
     border = Border(top=thin, left=thin, right=thin, bottom=thin)
 
     for x in range(5):
-        for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+2*11-1),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
+        for row in ws.iter_rows(min_row=start_cell.row,max_row=(int(start_cell.row)+19),max_col=column_index_from_string(start_cell.column),min_col=column_index_from_string(start_cell.column)):
+            print(" --------------------    "+str(start_cell.row)+"     "+str(start_cell.column))
             for cell in row:
                 if(to_skip<=0):
                     #get the period data at the right location
@@ -201,7 +213,9 @@ if __name__ == "__main__":
             print("please check the filename provided")
     
     sheet = ask_question("Please select a sheet for your year",wb.sheetnames)
+    print(sheet)
     worksheet = wb[wb.sheetnames[sheet]]
+    print(worksheet)
     batches = find_all_batches(worksheet)
     batch = ask_question("Please select your batch",batches)
     batch_cell = find_batch(worksheet,batches[batch])
