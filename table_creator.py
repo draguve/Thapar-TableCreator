@@ -7,7 +7,7 @@ Created on Wed Feb 13 17:51:54 2019
          Sarthak
 
 """
-
+import openpyxl
 from openpyxl import load_workbook
 from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
@@ -55,6 +55,8 @@ def get_timetable(ws, name_cell):
     finalworkbook, finalsheet = create_empty_table()
     finalsheet.title = name_cell.value
 
+    merge_dict = get_merge_dict(ws)
+
     to_skip = 0
     start_cell = name_cell.offset(1, 0)
 
@@ -71,22 +73,21 @@ def get_timetable(ws, name_cell):
             for cell in row:
                 if to_skip <= 0:
                     # get the period data at the right location
-                    class_code, class_room, teacher_code, to_skip = get_period(cell)
+                    class_code, class_room, to_skip = get_period(merge_dict,cell)
                     if class_code is not None and class_code[-1] != "P" and to_skip == 3:
                         print(cell)
-                    if class_code is not None and class_room is not None and teacher_code is not None:
+                    if class_code is not None and class_room is not None :
                         to_write = current_cell
                         to_write.value = class_code
                         if to_skip == 3:
                             to_write.offset(1, 0).value = class_room
                             to_write.offset(2, 0).value = "LAB"
-                            to_write.offset(3, 0).value = teacher_code
                             # style
                             style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column, to_write.row,
                                                                            to_write.offset(3, 0).column,
                                                                            to_write.offset(3, 0).row), border=border)
                         else:
-                            to_write.offset(1, 0).value = "%s | %s" % (class_room, teacher_code)
+                            to_write.offset(1, 0).value = "%s" % (class_room)
                             # style
                             style_range(finalsheet, '{0}{1}:{2}{3}'.format(to_write.column, to_write.row,
                                                                            to_write.offset(1, 0).column,
@@ -103,20 +104,12 @@ def get_timetable(ws, name_cell):
     return finalworkbook
 
 
-def get_period(cell):
-    # to find the code
-    class_code = cell.value
-    cell_under = cell.offset(1, 0)
-    class_cell = cell
-    if class_code is None and cell_under.border.left.style is None:
-        counter = 2
-        while class_code is None and class_cell.border.left.style != "medium" and counter > 0:
-            class_cell = class_cell.offset(0, -1)
-            class_code = class_cell.value
-            counter -= 1
-            if class_code is not None and class_code[-1] == "T":
-                class_code = None
-                break
+def get_period(merged,cell):
+    try:
+        class_cell = merged[cell]
+    except:
+        return None,None,1
+    class_code = class_cell.value
 
     # find cells to skip
     if class_code is not None and class_code[-1] == "P":
@@ -130,18 +123,17 @@ def get_period(cell):
     else:
         class_room = None
 
-    # find teacher code
-    if to_skip == 3:
-        teacher_code = class_cell.offset(3, 0).value
-    elif class_code is not None:
-        teacher_cell = class_cell.offset(1, 1)
-        while teacher_cell.value is None:
-            teacher_cell = teacher_cell.offset(0, 1)
-        teacher_code = teacher_cell.value
-    else:
-        teacher_code = None
+    return class_code, class_room, to_skip
 
-    return class_code, class_room, teacher_code, to_skip
+def get_merge_dict(sheet):
+    ranges = sheet.merged_cells.ranges
+    final = {}
+    for mergedcell in ranges:
+        bounds = mergedcell.bounds
+        for i in range(bounds[0], bounds[2] + 1):
+            for j in range(bounds[1], bounds[3] + 1):
+                final[sheet.cell(j,i)] = sheet.cell(bounds[1],bounds[0])
+    return final
 
 
 def create_empty_table():
