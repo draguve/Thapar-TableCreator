@@ -15,7 +15,7 @@ from openpyxl.styles.borders import Border, Side
 
 import sqlite3
 from openpyxl.styles import PatternFill
-from openpyxl.compat import range as pyxlrange
+# from openpyxl.compat import range as pyxlrange
 from copy import copy
 import colorsys
 
@@ -262,8 +262,8 @@ def style_range(ws, cell_range, border=Border(), fill=None, font=None, alignment
 def ask_question(question, choices):
     while True:
         print(question)
-        for x in range(1, len(choices) + 1):
-            print("{0}) - {1}".format(x, choices[x - 1]))
+        for x in range(0, len(choices)):
+            print("{0}) - {1}".format(x + 1, choices[x]))
         response = input(">")
         try:
             if int(response) < len(choices) + 1:
