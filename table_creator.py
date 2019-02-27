@@ -12,41 +12,46 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from openpyxl.utils import column_index_from_string
 from openpyxl.styles.borders import Border, Side
+
+import sqlite3
 from openpyxl.styles import PatternFill
 from openpyxl.compat import range as pyxlrange
 from copy import copy
 import colorsys
 
+import traceback
 
-def find_all_batches(ws):
-    class_row = None
-    for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
-        for cell in row:
-            if cell.value is not None and cell.value.lower() == "day":
-                class_row = cell.row + 1
-    if class_row is None:
-        return None
+
+def find_all_batches(ws,class_row):
+    # class_row = None
+    # for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
+    #     for cell in row:
+    #         if cell.value is not None and cell.value.lower() == "day":
+    #             class_row = cell.row + 1
+    # if class_row is None:
+    #     return None
+    class_row = ws[class_row].row
     classes = []
-    print(class_row)
     for column in ws.iter_cols(min_row=class_row, max_col=100, max_row=class_row):
         for cell in column:
             if cell.value is not None:
-                if cell.value.lower() != "day" and cell.value.lower() != "hours":
+                if str(cell.value).lower() != "day" and str(cell.value).lower() != "hours":
                     classes.append(cell.value)
     return classes
 
 
-def find_batch(ws, class_code):
-    class_row = None
-    for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
-        for cell in row:
-            if cell.value is not None and cell.value.lower() == "day":
-                class_row = cell.row + 1
-    if class_row is None:
-        return None
+def find_batch(ws, class_code,class_row):
+    # class_row = None
+    # for row in ws.iter_rows(min_row=1, max_col=1, max_row=10):
+    #     for cell in row:
+    #         if cell.value is not None and cell.value.lower() == "day":
+    #             class_row = cell.row + 1
+    # if class_row is None:
+    #     return None
+    class_row = ws[class_row].row
     for column in ws.iter_cols(min_row=class_row, max_col=100, max_row=class_row):
         for cell in column:
-            if cell.value is not None and cell.value.lower() == class_code.lower():
+            if str(cell.value) is not None and str(cell.value).lower() == str(class_code).lower():
                 return cell
     return None
 
@@ -73,10 +78,10 @@ def get_timetable(ws, name_cell):
             for cell in row:
                 if to_skip <= 0:
                     # get the period data at the right location
-                    class_code, class_room, to_skip = get_period(merge_dict,cell)
+                    class_code, class_room, to_skip = get_period(merge_dict, cell)
                     if class_code is not None and class_code[-1] != "P" and to_skip == 3:
                         print(cell)
-                    if class_code is not None and class_room is not None :
+                    if class_code is not None and class_room is not None:
                         to_write = current_cell
                         to_write.value = class_code
                         if to_skip == 3:
@@ -104,11 +109,73 @@ def get_timetable(ws, name_cell):
     return finalworkbook
 
 
-def get_period(merged,cell):
+def create_table(ws, merge_dict, class_cell, table_name):
+    start_cell = class_cell.offset(1, 0)
+    conn = sqlite3.connect('time_tables.db')
+    to_skip = 0
+    conn.execute('''CREATE TABLE "{}"(
+                    DAY INT,
+                    START_TIME INT,
+                    END_TIME INT,
+                    TYPE TEXT,
+                    DATA TEXT,
+                    CLASS_CODE TEXT
+                    )'''.format(table_name))
+    for x in range(5):
+        start_time = 8
+        for row in ws.iter_rows(min_row=start_cell.row, max_row=(int(start_cell.row) + 19),
+                                max_col=column_index_from_string(start_cell.column),
+                                min_col=column_index_from_string(start_cell.column)):
+            for cell in row:
+                if to_skip <= 0:
+                    # get the period data at the right location
+                    data, to_skip, class_code = get_period_data(merge_dict, cell)
+
+                    if to_skip == 3:
+                        end_time = start_time + 2
+                    else:
+                        end_time = start_time + 1
+
+                    if data is not None:
+                        y = 'INSERT INTO "{}" VALUES({},{},{},"{}","{}","{}")'.format(table_name, x, start_time, end_time,
+                                                                               class_code[-1], data,class_code)
+                        print(y)
+                        conn.execute(y)
+                else:
+                    to_skip -= 1
+                end_cell = cell
+                start_time = end_time
+        # End of day
+        to_skip = 0
+        start_cell = end_cell.offset(1, 0)
+    conn.commit()
+    conn.close()
+
+
+def get_period_data(merged, cell):
     try:
         class_cell = merged[cell]
     except:
-        return None,None,1
+        return None, 1 , None
+    class_code = class_cell.value
+
+    if class_code is not None and class_code[-1] == "P":
+        data = str(class_cell.value) + ':' + str(class_cell.offset(1, 0).value) + ':' + str(
+            class_cell.offset(2, 0).value) + ':' + str(class_cell.offset(3, 0).value)
+        to_skip = 3
+    elif class_code is not None:
+        data = str(class_cell.value) + ':' + str(class_cell.offset(1, 0).value)
+        to_skip = 1
+    else:
+        return None,1,None
+    return data, to_skip , class_code
+
+
+def get_period(merged, cell):
+    try:
+        class_cell = merged[cell]
+    except:
+        return None, None, 1
     class_code = class_cell.value
 
     # find cells to skip
@@ -125,6 +192,7 @@ def get_period(merged,cell):
 
     return class_code, class_room, to_skip
 
+
 def get_merge_dict(sheet):
     ranges = sheet.merged_cells.ranges
     final = {}
@@ -132,7 +200,7 @@ def get_merge_dict(sheet):
         bounds = mergedcell.bounds
         for i in range(bounds[0], bounds[2] + 1):
             for j in range(bounds[1], bounds[3] + 1):
-                final[sheet.cell(j,i)] = sheet.cell(bounds[1],bounds[0])
+                final[sheet.cell(j, i)] = sheet.cell(bounds[1], bounds[0])
     return final
 
 
@@ -215,12 +283,21 @@ if __name__ == "__main__":
         except FileNotFoundError:
             print("please check the filename provided")
 
-    sheet = ask_question("Please select a sheet for your year", wb.sheetnames)
-    print(sheet)
-    worksheet = wb[wb.sheetnames[sheet]]
-    print(worksheet)
-    batches = find_all_batches(worksheet)
-    batch = ask_question("Please select your batch", batches)
-    batch_cell = find_batch(worksheet, batches[batch])
-    finalworkbook = get_timetable(worksheet, batch_cell)
-    finalworkbook.save("{0}.xlsx".format(batches[batch]))
+    for sheet in wb.sheetnames:
+        worksheet = wb[sheet]
+        while True:
+            try:
+                print("Please input the first batches cell for worksheet {}".format(sheet))
+                class_row = input('>')
+                break
+            except ValueError:
+                print("Input Valid answer")
+        batches = find_all_batches(worksheet,class_row)
+        merge_dict = get_merge_dict(worksheet)
+        for batch in batches:
+            try:
+                batch_cell = find_batch(worksheet,batch,class_row)                
+                create_table(worksheet,merge_dict,batch_cell,"t"+sheet.replace(',','').replace(' ','')+"_"+batch_cell.value.replace(' ',''))
+            except Exception as e:
+                print(batch_cell.value)
+
