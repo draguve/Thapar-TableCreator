@@ -1,4 +1,5 @@
 from flask import Flask
+from colorhash import ColorHash
 import sqlite3
 app = Flask(__name__)
 
@@ -37,12 +38,14 @@ def get_html_table(year:str, batch:str):
         while time < 19:
             period = conn.execute('SELECT * FROM {} WHERE DAY = {} AND START_TIME = {}'.format(table_name, i, time)).fetchone()
             if period is not None:
+                #TODO: fix this nonsense
+                color = ColorHash(str(period[5][:-1]).strip().upper()).hex
                 if period[3] == 'P':
                         time+=2
-                        data = data + "<td width='100' colspan='2'>{}</td>".format(period[5])
+                        data = data + "<td width='100' colspan='2' bgcolor='{}'>{}</td>".format(color,period[5])
                 else:
                     time+=1
-                    data = data + "<td width='100'>{}</td>".format(period[5])
+                    data = data + "<td width='100' bgcolor='{}'>{}</td>".format(color,period[5])
             else:
                 time+=1
                 data = data + "<td width='100'>&nbsp;</td>"
